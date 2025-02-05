@@ -75,10 +75,3 @@
 - **실제 AI API 연결**: 현재는 임시 API를 사용 중이므로, 실제 AI API 연결 필요
 
 ---
-
-## 📝 라이선스
-이 프로젝트는 자유롭게 사용 가능하며, 필요에 따라 수정하여 사용할 수 있습니다.  
-문의 사항은 [your-email@example.com](mailto:your-email@example.com)으로 연락 주세요.
-
----
-```
