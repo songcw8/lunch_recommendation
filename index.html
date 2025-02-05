@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>점심 메뉴 추천쓰</title>
+  </head>
+  <body>
+    <header>
+      <button id="resetButton">저장된 데이터 리셋</button>
+    </header>
+    <form id="controller">
+      <label>
+        모델 :
+        <select name="modelOption">
+          <option value="1">gemini-1.5-flash</option>
+          <option value="2">deepseek-r1</option>
+        </select>
+      </label>
+      <textarea name="textData"></textarea>
+      <button>등록</button>
+    </form>
+    <div id="container"></div>
+    <script>
+      const _ = () => {
+        const container = document.querySelector("#container"); // 데이터를 표시할 컨테이너
+        const form = document.querySelector("#controller"); // 폼 요소
+        const resetButton = document.querySelector("#resetButton"); // 데이터 리셋 버튼
+        
+        resetButton.addEventListener("click", () => (data.length = 0)); // 데이터 초기화
+        
+        // Proxy를 이용해 데이터 변경 시 자동 업데이트
+        const data = new Proxy([], {
+          set(target, property, value) {
+            target[property] = value;
+            updateContainer(); // 화면 업데이트
+            updateStorage(target); // 로컬스토리지 업데이트
+            return true;
+          },
+        });
+        
+        // 페이지 로드시 저장된 데이터 불러오기
+        function onMounted() {
+          data.push(...(JSON.parse(localStorage.getItem("myData")) ?? []));
+        }
+        onMounted();
+
+        // 컨테이너 업데이트 (데이터 목록 렌더링)
+        function updateContainer() {
+          container.innerHTML = "";
+          for (const d of data) {
+            const tmp = document.createElement("div");
+            tmp.textContent = d.text;
+            
+            // 삭제 버튼 생성
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "삭제";
+            deleteButton.addEventListener("click", () => {
+              const filtered = data.filter((value) => value.id !== d.id);
+              data.length = 0;
+              data.push(...filtered);
+            });
+            
+            // 답변이 있는 경우 표시
+            if (d.reply) {
+              const box = document.createElement("div");
+              const reply = document.createElement("code");
+              box.appendChild(reply);
+              box.style.padding = "12px";
+              box.style.margin = "4px";
+              box.style.backgroundColor = "beige";
+              box.style.border = "1px solid black";
+              reply.textContent = d.reply;
+              tmp.appendChild(box);
+            }
+            tmp.appendChild(deleteButton);
+            container.appendChild(tmp);
+          }
+        }
+
+        // 로컬스토리지 업데이트
+        function updateStorage(target) {
+          localStorage.setItem("myData", JSON.stringify(target));
+        }
+        
+        // 폼 제출 이벤트 처리
+        async function handleForm(event) {
+          event.preventDefault();
+          const formData = new FormData(form);
+          const text = formData.get("textData");
+          let reply;
+          
+          // 선택된 모델에 따라 다른 API 호출
+          switch (formData.get("modelOption")) {
+            case "1":
+              reply = `👬 Gemini : ${await makeReply(text)}`;
+              break;
+            case "2":
+              reply = `🐋 DeepSeek : ${await makeReply2(text)}`;
+              break;
+            default:
+              alert("비정상적인 접근!");
+              throw new Error("알 수 없는 에러!");
+          }
+          
+          // 새 데이터 추가
+          const displayData = {
+            id: Date.now(),
+            text,
+            reply,
+          };
+          data.push(displayData);
+        }
+        
+        // Gemini API 호출 함수
+        async function makeReply(text) {
+          const url = "https://productive-majestic-olivine.glitch.me/1";
+          const response = await fetch(url, {
+            method: "POST",
+            body: JSON.stringify({
+              text: `너는 20년 경력의 메뉴 추천 전문가야. {${text}}의 메시지를 바탕으로, 점심 메뉴를 추천해주고, 50자 이내에 평문으로 작성해줘.`,
+            }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+          const json = await response.json();
+          return json.reply;
+        }
+        
+        // DeepSeek API 호출 함수
+        async function makeReply2(content) {
+          const url = "https://productive-majestic-olivine.glitch.me/2";
+          const response = await fetch(url, {
+            method: "POST",
+            body: JSON.stringify({
+              text: `너는 20년 경력의 메뉴 추천 전문가야. {${content}}의 메시지를 바탕으로, 점심 메뉴를 추천해주고, 50자 이내에 평문으로 작성해줘. 결과는 한글로 작성해줘.`,
+            }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+          const json = await response.json();
+          return json.reply;
+        }
+        
+        // 폼 제출 이벤트 리스너 등록
+        form.addEventListener("submit", handleForm);
+      };
+      
+      // 페이지 로드 시 실행
+      window.onload = _;
+    </script>
+  </body>
+</html>
